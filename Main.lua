@@ -1,2 +1,2 @@
 local player = game.Players.LocalPlayer
-player:Kick("تم تفعيل السكربت بنجاح - تجربة الطرد")
+player:Kick("جاري تحديث السكربت يرجى الانتظار")
