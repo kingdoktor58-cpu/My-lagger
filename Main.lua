@@ -1,257 +1,139 @@
-local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+-- منع تكرار السكربت
+if game.CoreGui:FindFirstChild("OsamaIntro") then game.CoreGui.OsamaIntro:Destroy() end
+if game.CoreGui:FindFirstChild("OsamaMain") then game.CoreGui.OsamaMain:Destroy() end
 
-local LocalPlayer = Players.LocalPlayer
+local player = game.Players.LocalPlayer
+local runService = game:GetService("RunService")
+local userInputService = game:GetService("UserInputService")
+local tweenService = game:GetService("TweenService")
 
-local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+-- 1. واجهة البداية (BY OSAMA) - شاشة كاملة
+local SplashGui = Instance.new("ScreenGui")
+SplashGui.Name = "OsamaIntro"
+SplashGui.Parent = game.CoreGui
+SplashGui.IgnoreGuiInset = true
 
-local LAGGER_CONFIG = isMobile and {
-    TableIncrease = 290,
-    Tries = 1,
-    LoopWaitTime = 0.85
-} or {
-    TableIncrease = 265,
-    Tries = 1,
-    LoopWaitTime = 0.05
-}
+local Background = Instance.new("Frame")
+Background.Size = UDim2.new(1, 0, 1, 0)
+Background.BackgroundColor3 = Color3.new(0, 0, 0)
+Background.Parent = SplashGui
+Background.ZIndex = 100
 
-local CUSTOM_REMOTE_PATH = "RobloxReplicatedStorage.SetPlayerBlockList"
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.LuckiestGuy
+Title.Text = "BY OSAMA"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextScaled = true
+Title.Parent = Background
+Title.ZIndex = 101
 
-local function resolveRemote(path)
-    if not path or path == "" then return nil end
-    local obj = game
-    local cleaned = path:gsub("^game%.", "")
-    for segment in cleaned:gmatch("[^%.]+") do
-        if obj then
-            obj = obj[segment]
-        else
-            return nil
-        end
+-- إضافة الموسيقى الحماسية جداً (Sahara - Phonk)
+local Sound = Instance.new("Sound", Background)
+Sound.SoundId = "rbxassetid://12140417242" -- هذه الأغنية هي الأشهر في السكربتات
+Sound.Volume = 5 -- صوت قوي جداً
+Sound.PlayOnRemove = false
+
+-- تشغيل الموسيقى مع تأثير اهتزاز للنص
+task.spawn(function()
+    Sound:Play()
+    local startTime = tick()
+    while tick() - startTime < 10 do -- تستمر 15 ثانية
+        Title.Rotation = math.random(-2, 2) -- اهتزاز خفيف حماسي
+        task.wait(0.05)
     end
-    return obj
-end
-
-local function getmaxvalue(val)
-    local mainvalueifonetable = 499999
-    if type(val) ~= "number" then return nil end
-    return mainvalueifonetable / (val + 2)
-end
-
-local function bomb(tableincrease, tries)
-    local maintable = {}
-    local spammedtable = {}
-    table.insert(spammedtable, {})
-    local z = spammedtable[1]
-    for i = 1, tableincrease do
-        local tableins = {}
-        table.insert(z, tableins)
-        z = tableins
+    
+    -- التلاشي بعد الـ 15 ثانية
+    for i = 0, 1, 0.05 do
+        Background.BackgroundTransparency = i
+        Title.TextTransparency = i
+        Sound.Volume = (1 - i) * 5
+        task.wait(0.05)
     end
-    local maximum = getmaxvalue(tableincrease) or 10000000
-    for i = 1, maximum do
-        table.insert(maintable, spammedtable)
-        if i % 5000 == 0 then task.wait() end
-    end
-    local remote = resolveRemote(CUSTOM_REMOTE_PATH)
-    if remote then
-        for i = 1, tries do
-            pcall(function()
-                if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
-                    remote:FireServer(maintable)
-                elseif remote:IsA("RemoteFunction") then
-                    remote:InvokeServer(maintable)
-                end
-            end)
-        end
-    end
-end
+    SplashGui:Destroy()
+end)
 
-local laggerEnabled = false
-local laggerThread = nil
+-------------------------------------------------------
+-- 2. واجهة التحكم (Auto Play)
+-------------------------------------------------------
+local MainGui = Instance.new("ScreenGui")
+MainGui.Name = "OsamaMain"
+MainGui.Parent = game.CoreGui
+MainGui.ResetOnSpawn = false
 
-local function startLaggerLoop()
-    while laggerEnabled do
-        game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
-        task.spawn(function()
-            bomb(LAGGER_CONFIG.TableIncrease, LAGGER_CONFIG.Tries)
-        end)
-        task.wait(math.max(LAGGER_CONFIG.LoopWaitTime, 0.15))
-    end
-end
+local MainButton = Instance.new("TextButton")
+MainButton.Size = UDim2.new(0, 150, 0, 50)
+MainButton.Position = UDim2.new(0.5, -75, 0.5, -25)
+MainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainButton.Text = "Auto Play: OFF"
+MainButton.TextColor3 = Color3.new(1, 1, 1)
+MainButton.Font = Enum.Font.SourceSansBold
+MainButton.TextSize = 20
+MainButton.Parent = MainGui
+Instance.new("UICorner", MainButton).CornerRadius = UDim.new(0, 12)
 
-local function stopLaggerLoop()
-    laggerEnabled = false
-    if laggerThread then
-        coroutine.close(laggerThread)
-        laggerThread = nil
-    end
-end
+local LockButton = Instance.new("TextButton")
+LockButton.Size = UDim2.new(0, 80, 0, 35)
+LockButton.Position = UDim2.new(0.9, -90, 0.05, 0)
+LockButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+LockButton.Text = "Unlock"
+LockButton.TextColor3 = Color3.new(1, 1, 1)
+LockButton.Parent = MainGui
+Instance.new("UICorner", LockButton).CornerRadius = UDim.new(0, 8)
 
-local function startLagger()
-    if laggerThread then return end
-    laggerEnabled = true
-    laggerThread = coroutine.create(startLaggerLoop)
-    coroutine.resume(laggerThread)
-end
+-- المتغيرات والتحكم
+local running, canDrag, speed = false, false, 35
 
--- الواجهة البرمجية (UI)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Osama lagger"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
-
-local Frame = Instance.new("Frame")
-Frame.BackgroundTransparency = 0.2
-Frame.Position = UDim2.new(0, 30, 0, 137)
-Frame.ClipsDescendants = true
-Frame.Active = true
-Frame.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- خلفية ذهبية لتناسب الخط الأسود
-Frame.Size = UDim2.new(0, 200, 0, 95) -- تم تقليل الطول بعد حذف الكيبايند
-Frame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = Frame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(0, 0, 0) -- حدود سوداء
-UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-UIStroke.Thickness = 2
-UIStroke.Parent = Frame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Position = UDim2.new(0, 10, 0, 5)
-TitleLabel.TextColor3 = Color3.new(0, 0, 0) -- اللون الأسود للعنوان
-TitleLabel.Text = "Osama Hub Lagger"
-TitleLabel.TextSize = 15
-TitleLabel.Size = UDim2.new(1, -40, 0, 20)
-TitleLabel.Parent = Frame
-
-local SubLabel = Instance.new("TextLabel")
-SubLabel.BackgroundTransparency = 1
-SubLabel.TextXAlignment = Enum.TextXAlignment.Left
-SubLabel.Font = Enum.Font.GothamMedium
-SubLabel.TextTransparency = 0.6
-SubLabel.TextColor3 = Color3.new(0, 0, 0) -- نص فرعي أسود شفاف قليلاً
-SubLabel.Text = "n  e  w"
-SubLabel.Position = UDim2.new(0, 10, 0, 23)
-SubLabel.TextSize = 11
-SubLabel.Size = UDim2.new(1, -40, 0, 15)
-SubLabel.Parent = Frame
-
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Font = Enum.Font.GothamBlack
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MinimizeBtn.Position = UDim2.new(1, -32, 0, 8)
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-MinimizeBtn.Text = "-"
-MinimizeBtn.TextSize = 14
-MinimizeBtn.Size = UDim2.new(0, 24, 0, 24)
-MinimizeBtn.Parent = Frame
-
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 6)
-MinCorner.Parent = MinimizeBtn
-
-local ToggleRow = Instance.new("Frame")
-ToggleRow.Position = UDim2.new(0, 10, 0, 48)
-ToggleRow.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-ToggleRow.Size = UDim2.new(1, -20, 0, 34)
-ToggleRow.Parent = Frame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.Parent = ToggleRow
-
-local ToggleLabel = Instance.new("TextLabel")
-ToggleLabel.BackgroundTransparency = 1
-ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-ToggleLabel.TextColor3 = Color3.new(1, 1, 1) -- نص التفعيل أبيض للوضوح
-ToggleLabel.Font = Enum.Font.GothamMedium
-ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
-ToggleLabel.Text = "Enable Lagger"
-ToggleLabel.TextSize = 13
-ToggleLabel.Size = UDim2.new(1, -60, 1, 0)
-ToggleLabel.Parent = ToggleRow
-
-local SwitchBg = Instance.new("Frame")
-SwitchBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-SwitchBg.Position = UDim2.new(1, -46, 0.5, -9)
-SwitchBg.Size = UDim2.new(0, 36, 0, 18)
-SwitchBg.Parent = ToggleRow
-
-local SwitchBgCorner = Instance.new("UICorner")
-SwitchBgCorner.CornerRadius = UDim.new(0, 9)
-SwitchBgCorner.Parent = SwitchBg
-
-local SwitchKnob = Instance.new("Frame")
-SwitchKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-SwitchKnob.Position = UDim2.new(0, 2, 0.5, -7)
-SwitchKnob.Size = UDim2.new(0, 14, 0, 14)
-SwitchKnob.Parent = SwitchBg
-
-local SwitchKnobCorner = Instance.new("UICorner")
-SwitchKnobCorner.CornerRadius = UDim.new(0, 7)
-SwitchKnobCorner.Parent = SwitchKnob
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Text = ""
-ToggleBtn.BackgroundTransparency = 1
-ToggleBtn.Size = UDim2.new(1, 0, 1, 0)
-ToggleBtn.Parent = ToggleRow
-
--- نظام السحب (Draggable)
+-- نظام السحب الذكي
 local dragging, dragStart, startPos
-Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
+MainButton.InputBegan:Connect(function(input)
+    if canDrag and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragging, dragStart, startPos = true, input.Position, MainButton.Position
     end
 end)
-UserInputService.InputChanged:Connect(function(input)
+
+userInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
+        MainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
-local minimized = false
-MinimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        Frame.Size = UDim2.new(0, 200, 0, 40)
-        MinimizeBtn.Text = "+"
-    else
-        Frame.Size = UDim2.new(0, 200, 0, 95)
-        MinimizeBtn.Text = "-"
-    end
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
-local function setToggle(state)
-    laggerEnabled = state
-    local goal = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-    local color = state and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(20, 20, 20)
-    TweenService:Create(SwitchKnob, TweenInfo.new(0.15), {Position = goal}):Play()
-    TweenService:Create(SwitchBg, TweenInfo.new(0.15), {BackgroundColor3 = color}):Play()
+LockButton.MouseButton1Click:Connect(function()
+    canDrag = not canDrag
+    LockButton.Text = canDrag and "Lock" or "Unlock"
+    LockButton.BackgroundColor3 = canDrag and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(180, 0, 0)
+end)
 
-    if state then
-        startLagger()
-    else
-        stopLaggerLoop()
+-- نظام التتبع لـ Time Bomb
+local function getNearest()
+    local target, dist = nil, math.huge
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (player.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
+            if d < dist then dist, target = d, v end
+        end
     end
+    return target
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    setToggle(not laggerEnabled)
+MainButton.MouseButton1Click:Connect(function()
+    running = not running
+    MainButton.Text = running and "Auto Play: ON" or "Auto Play: OFF"
+    MainButton.BackgroundColor3 = running and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(30, 30, 30)
+end)
+
+runService.Heartbeat:Connect(function()
+    if running and player.Character and player.Character:FindFirstChild("Humanoid") then
+        local target = getNearest()
+        player.Character.Humanoid.WalkSpeed = speed
+        if target and target.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.Humanoid:MoveTo(target.Character.HumanoidRootPart.Position)
+        end
+    end
 end)
